@@ -1,0 +1,14 @@
+artifact_uri: file:///c:/Users/PC/Desktop/Semestre 9/Analítica/Proyecto2/Proyecto2ACTM/Tarea4_Modelos/mlruns/170537332723741578/fc5b6ccd59614aeeb0bdfa12ff0044ac/artifacts
+end_time: 1778190129322
+entry_point_name: ''
+experiment_id: '170537332723741578'
+lifecycle_stage: active
+run_id: fc5b6ccd59614aeeb0bdfa12ff0044ac
+run_name: baseline_logreg
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778190122401
+status: 3
+tags: []
+user_id: PC

@@ -1,0 +1,23 @@
+artifact_path: "file:///c:/Users/PC/Desktop/Semestre 9/Anal\xEDtica/Proyecto2/Proyecto2ACTM/Tarea4_Modelos/mlruns/170537332723741578/models/m-ab604267374142e9a42a28afd2b3a73f/artifacts"
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.0
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.12.0
+model_id: m-ab604267374142e9a42a28afd2b3a73f
+model_size_bytes: 1492
+model_uuid: m-ab604267374142e9a42a28afd2b3a73f
+prompts: null
+run_id: fc5b6ccd59614aeeb0bdfa12ff0044ac
+utc_time_created: '2026-05-07 21:42:04.876012'

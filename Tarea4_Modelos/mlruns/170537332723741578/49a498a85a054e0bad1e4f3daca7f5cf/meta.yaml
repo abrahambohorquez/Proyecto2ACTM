@@ -1,0 +1,14 @@
+artifact_uri: file:///c:/Users/PC/Desktop/Semestre 9/Analítica/Proyecto2/Proyecto2ACTM/Tarea4_Modelos/mlruns/170537332723741578/49a498a85a054e0bad1e4f3daca7f5cf/artifacts
+end_time: 1778192292752
+entry_point_name: ''
+experiment_id: '170537332723741578'
+lifecycle_stage: active
+run_id: 49a498a85a054e0bad1e4f3daca7f5cf
+run_name: nn_v2_con_municipio_colegio
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778192292689
+status: 3
+tags: []
+user_id: PC

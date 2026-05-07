@@ -1,0 +1,14 @@
+artifact_uri: file:///c:/Users/PC/Desktop/Semestre 9/Analítica/Proyecto2/Proyecto2ACTM/Tarea4_Modelos/mlruns/170537332723741578/ff48e5d4935048fca1944de44ef4a92a/artifacts
+end_time: 1778190469686
+entry_point_name: ''
+experiment_id: '170537332723741578'
+lifecycle_stage: active
+run_id: ff48e5d4935048fca1944de44ef4a92a
+run_name: nn_med_128_64
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778190459743
+status: 3
+tags: []
+user_id: PC
