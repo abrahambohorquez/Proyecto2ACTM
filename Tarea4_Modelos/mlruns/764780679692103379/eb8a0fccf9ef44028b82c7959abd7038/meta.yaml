@@ -1,0 +1,15 @@
+artifact_uri: file:///c:/Users/abrah/OneDrive - Universidad de los Andes/INDUSTRIAL
+  SEMESTRE 8/Analitica/Proyecto2Analitica/Proyecto2ACTM/Tarea4_Modelos/mlruns/764780679692103379/eb8a0fccf9ef44028b82c7959abd7038/artifacts
+end_time: 1778621771740
+entry_point_name: ''
+experiment_id: '764780679692103379'
+lifecycle_stage: active
+run_id: eb8a0fccf9ef44028b82c7959abd7038
+run_name: nn_FINAL_v1
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778621750079
+status: 3
+tags: []
+user_id: abrah
