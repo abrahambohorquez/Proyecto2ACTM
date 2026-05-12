@@ -1,0 +1,10 @@
+artifact_location: file:///c:/Users/PC/Desktop/Semestre 9/Analítica/Proyecto2/Proyecto2ACTM/Tarea4_Modelos/mlruns/170537332723741578/models/m-ab604267374142e9a42a28afd2b3a73f/artifacts
+creation_timestamp: 1778190124833
+experiment_id: '170537332723741578'
+last_updated_timestamp: 1778190129293
+model_id: m-ab604267374142e9a42a28afd2b3a73f
+model_type: null
+name: modelo
+source_run_id: fc5b6ccd59614aeeb0bdfa12ff0044ac
+status: 2
+status_message: null
