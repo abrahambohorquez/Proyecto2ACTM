@@ -1,0 +1,11 @@
+artifact_location: file:///c:/Users/abrah/OneDrive - Universidad de los Andes/INDUSTRIAL
+  SEMESTRE 8/Analitica/Proyecto2Analitica/Proyecto2ACTM/Tarea4_Modelos/mlruns/764780679692103379/models/m-c781ece695e245be9708e634f3fd9a78/artifacts
+creation_timestamp: 1778621645487
+experiment_id: '764780679692103379'
+last_updated_timestamp: 1778621649823
+model_id: m-c781ece695e245be9708e634f3fd9a78
+model_type: null
+name: modelo
+source_run_id: 746b35b95c044f4d91d08214d065bce5
+status: 2
+status_message: null
