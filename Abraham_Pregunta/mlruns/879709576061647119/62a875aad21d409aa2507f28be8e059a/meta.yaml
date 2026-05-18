@@ -1,0 +1,15 @@
+artifact_uri: file:c:/Users/abrah/OneDrive - Universidad de los Andes/INDUSTRIAL SEMESTRE
+  8/Analitica/Proyecto2Analitica/Proyecto2ACTM/Abraham_Pregunta/mlruns/879709576061647119/62a875aad21d409aa2507f28be8e059a/artifacts
+end_time: 1778791264548
+entry_point_name: ''
+experiment_id: '879709576061647119'
+lifecycle_stage: active
+run_id: 62a875aad21d409aa2507f28be8e059a
+run_name: baseline_ridge_v3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778791264440
+status: 4
+tags: []
+user_id: abrah

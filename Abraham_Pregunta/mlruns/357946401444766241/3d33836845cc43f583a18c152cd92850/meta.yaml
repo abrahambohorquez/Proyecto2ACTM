@@ -1,0 +1,15 @@
+artifact_uri: file:///c:/Users/abrah/OneDrive - Universidad de los Andes/INDUSTRIAL
+  SEMESTRE 8/Analitica/Proyecto2Analitica/Proyecto2ACTM/Abraham_Pregunta/mlruns/357946401444766241/3d33836845cc43f583a18c152cd92850/artifacts
+end_time: 1779137314217
+entry_point_name: ''
+experiment_id: '357946401444766241'
+lifecycle_stage: active
+run_id: 3d33836845cc43f583a18c152cd92850
+run_name: NN-REF_todas_features
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779137283952
+status: 3
+tags: []
+user_id: abrah
