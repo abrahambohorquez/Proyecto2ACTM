@@ -1,0 +1,286 @@
+/* ─── Tablero Saber 11 — Córdoba ───────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #f7f8fb;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               'Helvetica Neue', Arial, sans-serif;
+  color: #111827;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Header ──────────────────────────────────────────────────────── */
+.app-header {
+  background: #1a2c42;
+  color: #fff;
+  padding: 18px 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #2e6da4;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.app-header-left { display: flex; flex-direction: column; gap: 2px; }
+.app-header-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #f1f5f9;
+}
+.app-header-sub {
+  font-size: 0.77rem;
+  color: #94a3b8;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+.app-header-right { display: flex; gap: 10px; align-items: center; }
+.header-badge {
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  padding: 5px 13px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ─── Tab bar ─────────────────────────────────────────────────────── */
+.tab-container {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 44px;
+  box-shadow: 0 1px 0 #e5e7eb;
+}
+.custom-tabs .tab {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 3px solid transparent !important;
+  color: #6b7280 !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  padding: 15px 20px !important;
+  margin: 0 2px !important;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.custom-tabs .tab--selected {
+  color: #1e3a5f !important;
+  border-bottom-color: #2e6da4 !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+}
+.custom-tabs .tab:hover:not(.tab--selected) {
+  color: #374151 !important;
+  border-bottom-color: #d1d5db !important;
+}
+/* Remove Dash default tab parent borders */
+.custom-tabs .tab-parent,
+.custom-tabs > div:first-child {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* ─── Content area ────────────────────────────────────────────────── */
+.content-area {
+  padding: 30px 44px 52px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ─── Section header ──────────────────────────────────────────────── */
+.section-header { margin-bottom: 22px; }
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+.section-desc {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 7px;
+  max-width: 780px;
+  line-height: 1.7;
+}
+
+/* ─── KPI cards ───────────────────────────────────────────────────── */
+.metrics-row {
+  display: flex;
+  gap: 13px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.metric-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 18px 22px 16px;
+  flex: 1;
+  min-width: 140px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.metric-card:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.09);
+  transform: translateY(-1px);
+}
+.metric-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #9ca3af;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+.metric-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.metric-sub {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ─── Chart grid ──────────────────────────────────────────────────── */
+.charts-grid { display: grid; gap: 17px; margin-bottom: 18px; }
+.charts-grid-2 { grid-template-columns: 1fr 1fr; }
+.charts-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* ─── Chart card ──────────────────────────────────────────────────── */
+.chart-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 20px 20px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+.chart-card-header { margin-bottom: 10px; }
+.chart-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.3;
+}
+.chart-sub {
+  font-size: 0.76rem;
+  color: #9ca3af;
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+/* ─── Insight box ─────────────────────────────────────────────────── */
+.insight-box {
+  background: #eff6ff;
+  border-left: 3px solid #2e6da4;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 18px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+  color: #374151;
+  line-height: 1.75;
+}
+.insight-box.warn {
+  background: #fffbeb;
+  border-left-color: #d97706;
+}
+.insight-box.success {
+  background: #f0fdf4;
+  border-left-color: #16a34a;
+}
+.insight-box b { color: #1e3a5f; font-weight: 600; }
+.insight-box.warn b { color: #92400e; }
+
+/* ─── Metric selector (radio row) ────────────────────────────────── */
+.selector-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.selector-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ─── Summary card (panorama) ─────────────────────────────────────── */
+.summary-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-top: 3px solid;
+}
+.summary-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-bottom: 6px;
+}
+.summary-card-main {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.summary-card-metric {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+.summary-card-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ─── Divider ─────────────────────────────────────────────────────── */
+.divider { height: 1px; background: #e5e7eb; margin: 26px 0; }
+
+/* ─── Feature list boxes ──────────────────────────────────────────── */
+.feat-box {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 14px 16px;
+  flex: 1;
+}
+.feat-box-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 7px;
+}
+.feat-box-content {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.9;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .content-area { padding: 20px 18px 40px; }
+  .app-header { padding: 14px 18px; }
+  .tab-container { padding: 0 14px; }
+  .charts-grid-2, .charts-grid-3 { grid-template-columns: 1fr; }
+  .metrics-row { gap: 10px; }
+  .metric-card { min-width: 120px; padding: 14px 16px; }
+  .metric-value { font-size: 1.5rem; }
+  .app-header-right { display: none; }
+}
