@@ -4,10 +4,22 @@ Análisis predictivo · Secretaría de Educación del Departamento de Córdoba
 """
 
 import os
+import json
 import numpy as np
 import pandas as pd
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, State
+from dash.exceptions import PreventUpdate
+
+try:
+    import joblib
+except Exception:
+    joblib = None
+
+try:
+    from tensorflow import keras
+except Exception:
+    keras = None
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -50,8 +62,60 @@ _CFG = dict(
 # ─────────────────────────────────────────────────────────────────────
 # 2. CSV LOADING & AGGREGATION
 # ─────────────────────────────────────────────────────────────────────
-_CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                    '..', 'Resultados_ICFES_Cordoba_clean.csv')
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+_CSV = os.path.join(_ROOT, 'Resultados_ICFES_Cordoba_clean.csv')
+
+_XGB_MODEL_PATH = os.path.join(_ROOT, 'modelo_final_icfes_xgboost.joblib')
+_NN_MODEL_PATH = os.path.join(_ROOT, 'modelo_final_icfes.keras')
+_COLUMNAS_PATH = os.path.join(_ROOT, 'columnas_modelo.json')
+_CATEGORIAS_PATH = os.path.join(_ROOT, 'categorias_modelo.json')
+_THRESHOLD_XGB_PATH = os.path.join(_ROOT, 'threshold_xgboost.json')
+
+
+def _safe_load_json(path, fallback):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f'[!] No se pudo cargar {os.path.basename(path)} — {e}')
+        return fallback
+
+
+COLUMNAS_MODELO = _safe_load_json(_COLUMNAS_PATH, [])
+
+CATEGORIAS_MODELO = _safe_load_json(
+    _CATEGORIAS_PATH,
+    {
+        'categorical_features': {},
+        'numeric_features': {}
+    }
+)
+
+THRESHOLD_XGB_INFO = _safe_load_json(
+    _THRESHOLD_XGB_PATH,
+    {'optimized_threshold': 0.3103}
+)
+
+MAT_XGB_THRESHOLD = float(THRESHOLD_XGB_INFO.get('optimized_threshold', 0.3103))
+MAT_NN_THRESHOLD = 0.5
+
+MAT_XGB_MODEL = None
+MAT_NN_MODEL = None
+
+try:
+    if joblib is not None and os.path.exists(_XGB_MODEL_PATH):
+        MAT_XGB_MODEL = joblib.load(_XGB_MODEL_PATH)
+        print('[OK] Modelo XGBoost cargado')
+except Exception as e:
+    print(f'[!] No se pudo cargar el modelo XGBoost — {e}')
+
+try:
+    if keras is not None and os.path.exists(_NN_MODEL_PATH):
+        MAT_NN_MODEL = keras.models.load_model(_NN_MODEL_PATH)
+        print('[OK] Modelo de red neuronal cargado')
+except Exception as e:
+    print(f'[!] No se pudo cargar el modelo de red neuronal — {e}')
 
 df = None
 _hg = _hm = None  # histogram tuples
@@ -152,7 +216,138 @@ ING_IMPORTANCE = pd.DataFrame([
 ING_CM   = np.array([[3544, 7816], [920, 16831]])
 REG_TEST = dict(rmse=38.088, mae=30.352, r2=0.3153, mape=12.93)
 ING_TEST = dict(f1=0.794, auc=0.740, pr=0.792, recall=0.948, precision=0.683)
-MAT      = dict(n=100094, n_clean=29714, pct_cumple=3.95, pct_no=96.05)
+MAT = dict(
+    n_raw=100094,
+    n_clean=29714,
+    n_test=5943,
+    n_pos_test=235,
+    pct_cumple=3.95,
+    pct_no=96.05,
+    threshold_score=70
+)
+
+MAT_MODELS = {
+    'xgb': {
+        'label': 'Modelo XGBoost',
+        'short': 'XGBoost',
+        'threshold': 0.3103,
+        'accuracy': 0.7799,
+        'recall': 0.8255,
+        'f1': 0.2288,
+        'auc': 0.8856,
+        'cm': np.array([[4441, 1267], [41, 194]]),
+        'note': 'Modelo seleccionado: mayor recall y AUC en test. Reduce los falsos negativos frente a la red neuronal.'
+    },
+    'nn': {
+        'label': 'Modelo de Redes Neuronales',
+        'short': 'Red neuronal',
+        'threshold': 0.5,
+        'accuracy': 0.7871,
+        'recall': 0.7660,
+        'f1': 0.2215,
+        'auc': 0.8743,
+        'cm': np.array([[4498, 1210], [55, 180]]),
+        'note': 'Modelo base de red neuronal con buen AUC, pero menor recall que XGBoost para la clase positiva.'
+    }
+}
+
+MAT_FEATURES = [
+    'anio_periodo',
+    'periodo_aplicacion',
+
+    'cole_area_ubicacion',
+    'cole_bilingue',
+    'cole_calendario',
+    'cole_caracter',
+    'cole_genero',
+    'cole_jornada',
+    'cole_naturaleza',
+    'cole_sede_principal',
+    'cole_mcpio_ubicacion',
+
+    'edad_aprox',
+    'estu_genero',
+    'estu_mcpio_reside',
+
+    'fami_cuartoshogar',
+    'fami_educacionmadre',
+    'fami_educacionpadre',
+    'fami_estratovivienda',
+    'fami_personashogar',
+    'fami_tieneautomovil',
+    'fami_tienecomputador',
+    'fami_tieneinternet',
+    'fami_tienelavadora'
+]
+
+MAT_NUMERIC_FEATURES = [
+    'anio_periodo',
+    'periodo_aplicacion',
+    'edad_aprox'
+]
+
+MAT_FEATURE_LABELS = {
+    'anio_periodo': 'Año en el que se toma el examen',
+    'periodo_aplicacion': 'Periodo de aplicación del examen',
+
+    'cole_area_ubicacion': 'Área de ubicación del colegio',
+    'cole_bilingue': 'Colegio bilingüe',
+    'cole_calendario': 'Calendario del colegio',
+    'cole_caracter': 'Carácter del colegio',
+    'cole_genero': 'Género del colegio',
+    'cole_jornada': 'Jornada del colegio',
+    'cole_naturaleza': 'Naturaleza del colegio',
+    'cole_sede_principal': '¿Es sede principal?',
+    'cole_mcpio_ubicacion': 'Municipio del colegio',
+
+    'edad_aprox': 'Edad aproximada del estudiante',
+    'estu_genero': 'Género del estudiante',
+    'estu_mcpio_reside': 'Municipio de residencia del estudiante',
+
+    'fami_cuartoshogar': 'Número de cuartos en el hogar',
+    'fami_educacionmadre': 'Nivel educativo de la madre',
+    'fami_educacionpadre': 'Nivel educativo del padre',
+    'fami_estratovivienda': 'Estrato de la vivienda',
+    'fami_personashogar': 'Número de personas en el hogar',
+    'fami_tieneautomovil': '¿Tiene automóvil en el hogar?',
+    'fami_tienecomputador': '¿Tiene computador en el hogar?',
+    'fami_tieneinternet': '¿Tiene internet en el hogar?',
+    'fami_tienelavadora': '¿Tiene lavadora en el hogar?'
+}
+
+MAT_FEATURE_GROUPS = [
+    ('Información del examen', [
+        'anio_periodo',
+        'periodo_aplicacion'
+    ]),
+    ('Información del colegio', [
+        'cole_area_ubicacion',
+        'cole_bilingue',
+        'cole_calendario',
+        'cole_caracter',
+        'cole_genero',
+        'cole_jornada',
+        'cole_naturaleza',
+        'cole_sede_principal',
+        'cole_mcpio_ubicacion'
+    ]),
+    ('Información del estudiante', [
+        'edad_aprox',
+        'estu_genero',
+        'estu_mcpio_reside'
+    ]),
+    ('Información familiar y socioeconómica', [
+        'fami_cuartoshogar',
+        'fami_educacionmadre',
+        'fami_educacionpadre',
+        'fami_estratovivienda',
+        'fami_personashogar',
+        'fami_tieneautomovil',
+        'fami_tienecomputador',
+        'fami_tieneinternet',
+        'fami_tienelavadora'
+    ])
+]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -577,6 +772,209 @@ def _mat_dist():
     fig.update_yaxes(**_AX, title='Estudiantes')
     return fig
 
+def _mat_model_data(model_key='xgb'):
+    return MAT_MODELS.get(model_key or 'xgb', MAT_MODELS['xgb'])
+
+
+def _mat_kpi_cards(model_key='xgb'):
+    m = _mat_model_data(model_key)
+
+    return [
+        kpi('Accuracy — test', f'{m["accuracy"]:.3f}',
+            'Exactitud global del modelo', NAVY),
+        kpi('Recall — test', f'{m["recall"]:.1%}',
+            'Métrica principal: detecta estudiantes que sí cumplen', BLUE),
+        kpi('F1-score — test', f'{m["f1"]:.3f}',
+            'Balance entre precisión y recall', GRN),
+        kpi('ROC-AUC — test', f'{m["auc"]:.3f}',
+            'Capacidad discriminativa del modelo', MID),
+        kpi('Umbral usado', f'{m["threshold"]:.3f}',
+            'Punto de corte para clasificar cumple/no cumple', AMB),
+    ]
+
+
+def _mat_confusion_matrix_model(model_key='xgb'):
+    m = _mat_model_data(model_key)
+    cm = m['cm']
+    total = cm.sum()
+    z = cm / total * 100
+
+    annots = []
+    for i in range(2):
+        for j in range(2):
+            fc = 'white' if z[i, j] > 20 else '#1a1a2e'
+            annots.append(dict(
+                x=j, y=i,
+                text=f'<b>{cm[i,j]:,}</b><br>{z[i,j]:.1f}%',
+                showarrow=False,
+                font=dict(size=14, color=fc),
+                xref='x', yref='y',
+            ))
+
+    cell_labels = [
+        'Verdaderos Negativos',
+        'Falsos Positivos',
+        'Falsos Negativos',
+        'Verdaderos Positivos'
+    ]
+
+    for idx, lbl in enumerate(cell_labels):
+        i, j = divmod(idx, 2)
+        fc = 'rgba(255,255,255,0.70)' if z[i, j] > 20 else 'rgba(30,58,95,0.50)'
+        annots.append(dict(
+            x=j, y=i + 0.32,
+            text=f'<i style="font-size:11px">{lbl}</i>',
+            showarrow=False,
+            font=dict(size=10, color=fc),
+            xref='x', yref='y',
+        ))
+
+    fig = go.Figure(go.Heatmap(
+        z=z,
+        x=['Predicho: No cumple', 'Predicho: Cumple'],
+        y=['Real: No cumple', 'Real: Cumple'],
+        colorscale=[[0, '#eef4fc'], [0.35, '#5b9bd5'], [1, '#1e3a5f']],
+        showscale=False,
+        hovertemplate='%{y} / %{x}<br>%{z:.1f}% del total<extra></extra>',
+    ))
+
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=_L['font'],
+        margin=dict(l=10, r=10, t=14, b=10),
+        annotations=annots,
+        xaxis=dict(side='top', gridcolor='rgba(0,0,0,0)',
+                   linecolor='rgba(0,0,0,0)'),
+        yaxis=dict(autorange='reversed', gridcolor='rgba(0,0,0,0)',
+                   linecolor='rgba(0,0,0,0)'),
+    )
+
+    return fig
+
+
+def _mat_metrics_bar(model_key='xgb'):
+    m = _mat_model_data(model_key)
+
+    labels = ['Accuracy', 'Recall', 'F1-score', 'ROC-AUC']
+    values = [m['accuracy'], m['recall'], m['f1'], m['auc']]
+    colors = [NAVY, BLUE, GRN, MID]
+
+    fig = go.Figure(go.Bar(
+        x=labels,
+        y=values,
+        marker_color=colors,
+        marker_line_width=0,
+        text=[f'{v:.3f}' for v in values],
+        textposition='outside',
+        textfont=dict(size=11),
+        hovertemplate='%{x}: %{y:.4f}<extra></extra>',
+    ))
+
+    fig.update_layout(
+        **_L,
+        yaxis=dict(title='Valor de la métrica',
+                   gridcolor='#efefef',
+                   linecolor='#efefef',
+                   range=[0, 1]),
+        xaxis=dict(gridcolor='rgba(0,0,0,0)',
+                   linecolor='#efefef'),
+        showlegend=False
+    )
+
+    return fig
+
+
+def _mat_input_field(col):
+    label = MAT_FEATURE_LABELS.get(col, col)
+
+    common_style = {
+        'minWidth': '230px',
+        'flex': '1 1 230px',
+        'marginBottom': '12px'
+    }
+
+    label_style = {
+        'fontSize': '12px',
+        'fontWeight': '600',
+        'color': TEXT,
+        'display': 'block',
+        'marginBottom': '6px'
+    }
+
+    if col in MAT_NUMERIC_FEATURES:
+        info = CATEGORIAS_MODELO.get('numeric_features', {}).get(col, {})
+        median = info.get('median', 0)
+        min_v = info.get('min', None)
+        max_v = info.get('max', None)
+
+        if col == 'anio_periodo' and not median:
+            median = 2022
+        if col == 'periodo_aplicacion' and not median:
+            median = 2
+        if col == 'edad_aprox' and not median:
+            median = 17
+
+        return html.Div([
+            html.Label(label, style=label_style),
+            dcc.Input(
+                id=f'mat-input-{col}',
+                type='number',
+                value=round(float(median), 0),
+                min=min_v,
+                max=max_v,
+                debounce=True,
+                style={
+                    'width': '100%',
+                    'padding': '10px 12px',
+                    'border': f'1px solid {BORD}',
+                    'borderRadius': '10px',
+                    'fontSize': '13px'
+                }
+            )
+        ], style=common_style)
+
+    values = CATEGORIAS_MODELO.get('categorical_features', {}).get(col, [])
+
+    options = [
+        {'label': str(v), 'value': str(v)}
+        for v in values
+        if pd.notna(v) and str(v).strip() != ''
+    ]
+
+    default_value = options[0]['value'] if options else None
+
+    return html.Div([
+        html.Label(label, style=label_style),
+        dcc.Dropdown(
+            id=f'mat-input-{col}',
+            options=options,
+            value=default_value,
+            clearable=False,
+            placeholder='Seleccione una opción',
+            style={
+                'fontSize': '13px'
+            }
+        )
+    ], style=common_style)
+
+
+def _mat_input_section(title, cols):
+    return html.Div([
+        html.Div(title, className='chart-title',
+                 style={'marginBottom': '14px'}),
+        html.Div([
+            _mat_input_field(col) for col in cols
+        ], style={
+            'display': 'flex',
+            'flexWrap': 'wrap',
+            'gap': '12px'
+        })
+    ], style={
+        'borderTop': f'1px solid {BORD}',
+        'paddingTop': '18px',
+        'marginTop': '18px'
+    })
 
 # ─────────────────────────────────────────────────────────────────────
 # 6. PRECOMPUTE STATIC CHARTS
@@ -591,6 +989,8 @@ FIG_CM     = _confusion_matrix()
 FIG_IMP    = _feature_importance()
 FIG_DONUT  = _mat_donut()
 FIG_MDIST  = _mat_dist()
+FIG_MAT_CM = _mat_confusion_matrix_model('xgb')
+FIG_MAT_METRICS = _mat_metrics_bar('xgb')
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -882,87 +1282,132 @@ def _tab_ingles():
 def _tab_matematicas():
     return html.Div([
         section(
-            'Puntaje de Matemáticas — Análisis de Clasificación',
-            'Exploración predictiva para identificar qué estudiantes de Córdoba alcanzan '
-            'un puntaje mayor a 70 en la prueba de matemáticas Saber 11 (período 2015–2022). '
-            'El desbalanceo severo de clases (96.6% / 3.4%) es el principal reto metodológico.',
+            'Predicción del Puntaje de Matemáticas > 70 — Clasificación Binaria',
+            'Modelo para identificar si un estudiante de Córdoba alcanza un puntaje superior '
+            'a 70 en matemáticas Saber 11. El objetivo operativo es detectar estudiantes con '
+            'preparación suficiente para avanzar a cálculo diferencial, priorizando el recall '
+            'para reducir falsos negativos.'
+        ),
+
+        metric_radio('Modelo a evaluar:', 'mat-model-selector', [
+            {'l': 'Modelo XGBoost', 'v': 'xgb'},
+            {'l': 'Modelo de Redes Neuronales', 'v': 'nn'},
+        ], 'xgb'),
+
+        html.Div(
+            _mat_kpi_cards('xgb'),
+            id='mat-kpis',
+            className='metrics-row'
         ),
 
         html.Div([
-            kpi('Estudiantes (2015–2022)', '100.094',
-                'Período filtrado del dataset completo', NAVY),
-            kpi('Cumplen el umbral (> 70)',  f'{MAT["pct_cumple"]:.1f}%',
-                '3,401 estudiantes del período analizado', RED),
-            kpi('No cumplen (≤ 70)',          f'{MAT["pct_no"]:.1f}%',
-                '96,693 estudiantes · clase mayoritaria', LGRAY),
-            kpi('Umbral de clasificación',    '> 70 pts',
-                'Puntaje de corte definido en el análisis', BLUE),
-            kpi('Features disponibles',       '23',
-                'Temporales · colegio · familia · estudiante', MID),
-        ], className='metrics-row'),
+            html.Div([
+                html.Div('Matriz de confusión — modelo seleccionado (test)',
+                         className='chart-title'),
+                html.Div(
+                    'Conjunto de test: 5,943 estudiantes · clase positiva: 235 estudiantes · '
+                    'positivo = puntaje de matemáticas > 70',
+                    className='chart-sub'
+                ),
+                dcc.Graph(
+                    id='mat-cm-chart',
+                    figure=FIG_MAT_CM,
+                    config=_CFG,
+                    style={'height': '340px'}
+                ),
+            ], className='chart-card'),
+
+            html.Div([
+                html.Div('Métricas del modelo seleccionado',
+                         className='chart-title'),
+                html.Div(
+                    'La métrica principal es recall, porque un falso negativo asignaría '
+                    'refuerzo a un estudiante que sí cumple el requisito.',
+                    className='chart-sub'
+                ),
+                dcc.Graph(
+                    id='mat-metrics-chart',
+                    figure=FIG_MAT_METRICS,
+                    config=_CFG,
+                    style={'height': '340px'}
+                ),
+            ], className='chart-card'),
+        ], className='charts-grid charts-grid-2'),
+
+        html.Div(
+            id='mat-model-note',
+            children=insight(html.Span([
+                html.B('Modelo seleccionado: '),
+                'XGBoost con umbral optimizado. En test alcanza recall de 82.6% y AUC de 0.886, '
+                'superando a la red neuronal en detección de estudiantes que sí cumplen el umbral.'
+            ]), kind='success')
+        ),
+
+        html.Div(className='divider'),
 
         html.Div([
             chart_card(
                 'Balance de clases — variable objetivo',
-                'Desbalanceo severo: solo el 3.4% supera el umbral de 70 pts en matemáticas',
-                FIG_DONUT, height=320,
+                'Desbalanceo severo: solo el 3.95% supera el umbral de 70 pts en matemáticas',
+                FIG_DONUT,
+                height=320,
             ),
             chart_card(
                 'Distribución del puntaje de matemáticas',
                 'Rojo = no cumple el umbral (≤ 70) · Verde = cumple (> 70) · línea punteada = umbral',
-                FIG_MDIST, height=320,
+                FIG_MDIST,
+                height=320,
             ),
         ], className='charts-grid charts-grid-2'),
 
         insight(html.Span([
-            html.B('Reto metodológico — desbalanceo severo: '),
-            'Un modelo que clasifique a ',
-            html.B('todos'),
-            ' los estudiantes como "no cumple" obtendría una exactitud del 96.6% '
-            'sin aprender nada. Para este problema, las métricas relevantes son ',
-            html.B('F1, PR-AUC y recall de la clase minoritaria'),
-            ', no la exactitud. Se requieren técnicas como class_weight balanceado, '
-            'SMOTE sobre el conjunto de entrenamiento, o ajuste de umbral de decisión '
-            'para que el modelo sea útil operativamente.',
+            html.B('Interpretación del modelo: '),
+            'La exactitud no es la métrica principal porque el problema está fuertemente '
+            'desbalanceado. Un clasificador que prediga siempre "no cumple" tendría alta '
+            'exactitud, pero sería inútil. Por eso se priorizan recall, F1-score y AUC.'
         ]), kind='warn'),
 
         html.Div(className='divider'),
 
-        html.H3('Variables del modelo',
-                style={'fontSize': '0.95rem', 'fontWeight': '600',
-                       'color': TEXT, 'marginBottom': '14px'}),
-
         html.Div([
-            html.Div([
-                html.Div('Temporales', className='feat-box-title',
-                         style={'color': BLUE}),
-                html.Div('anio_periodo · periodo_aplicacion',
-                         className='feat-box-content'),
-            ], className='feat-box'),
-            html.Div([
-                html.Div('Características del colegio', className='feat-box-title',
-                         style={'color': BLUE}),
-                html.Div('área · bilingüe · calendario · carácter · género · '
-                         'jornada · naturaleza · sede · municipio',
-                         className='feat-box-content'),
-            ], className='feat-box', style={'flex': '2'}),
-            html.Div([
-                html.Div('Contexto familiar', className='feat-box-title',
-                         style={'color': BLUE}),
-                html.Div('cuartos · educ. madre · educ. padre · estrato · '
-                         'personas · automóvil · computador · internet · lavadora',
-                         className='feat-box-content'),
-            ], className='feat-box', style={'flex': '2'}),
-        ], style={'display': 'flex', 'gap': '14px', 'marginBottom': '20px'}),
+            html.Div('Simulador de predicción individual',
+                     className='chart-title'),
+            html.Div(
+                'Ingrese las características del estudiante. El sistema transforma las variables '
+                'a la misma codificación usada en entrenamiento y estima si el estudiante cumple '
+                'el umbral de matemáticas.',
+                className='chart-sub',
+                style={'marginBottom': '10px'}
+            ),
 
-        insight(html.Span([
-            html.B('Estado del análisis: '),
-            'La exploración de datos confirma la viabilidad del problema predictivo. '
-            'Las variables de contexto disponibles son las mismas que explican el puntaje '
-            'global (R² ≈ 0.31) y el nivel de inglés (AUC ≈ 0.74), por lo que es razonable '
-            'esperar un desempeño similar una vez resuelto el desbalanceo de clases. '
-            'El análisis completo de modelamiento se encuentra en desarrollo.',
-        ]), kind='warn'),
+            *[
+                _mat_input_section(title, cols)
+                for title, cols in MAT_FEATURE_GROUPS
+            ],
+
+            html.Button(
+                'Predecir resultado',
+                id='mat-predict-button',
+                n_clicks=0,
+                style={
+                    'marginTop': '18px',
+                    'background': NAVY,
+                    'color': 'white',
+                    'border': 'none',
+                    'borderRadius': '10px',
+                    'padding': '12px 18px',
+                    'fontWeight': '600',
+                    'fontSize': '14px',
+                    'cursor': 'pointer'
+                }
+            ),
+
+            html.Div(
+                id='mat-prediction-output',
+                style={'marginTop': '18px'}
+            )
+
+        ], className='chart-card', style={'padding': '22px'}),
 
     ], className='content-area')
 
@@ -1032,6 +1477,128 @@ def update_reg(metric):
 def update_ing(metric):
     return _ing_comparison(metric or 'f1')
 
+@app.callback(
+    Output('mat-kpis', 'children'),
+    Output('mat-cm-chart', 'figure'),
+    Output('mat-metrics-chart', 'figure'),
+    Output('mat-model-note', 'children'),
+    Input('mat-model-selector', 'value')
+)
+def update_mat_model(model_key):
+    m = _mat_model_data(model_key)
+
+    note_kind = 'success' if model_key == 'xgb' else 'info'
+
+    note = insight(html.Span([
+        html.B(f'{m["label"]}: '),
+        m['note']
+    ]), kind=note_kind)
+
+    return (
+        _mat_kpi_cards(model_key),
+        _mat_confusion_matrix_model(model_key),
+        _mat_metrics_bar(model_key),
+        note
+    )
+
+
+@app.callback(
+    Output('mat-prediction-output', 'children'),
+    Input('mat-predict-button', 'n_clicks'),
+    State('mat-model-selector', 'value'),
+    *[State(f'mat-input-{col}', 'value') for col in MAT_FEATURES],
+    prevent_initial_call=True
+)
+def predict_math_score(n_clicks, model_key, *values):
+    if not n_clicks:
+        raise PreventUpdate
+
+    if not COLUMNAS_MODELO:
+        return insight(html.Span([
+            html.B('Error: '),
+            'No se encontró columnas_modelo.json. Este archivo es necesario para alinear '
+            'las variables del formulario con las columnas usadas en entrenamiento.'
+        ]), kind='warn')
+
+    raw_data = dict(zip(MAT_FEATURES, values))
+
+    for col in MAT_NUMERIC_FEATURES:
+        raw_data[col] = pd.to_numeric(raw_data.get(col), errors='coerce')
+
+    nuevo_estudiante = pd.DataFrame([raw_data])
+
+    nuevo_estudiante_encoded = pd.get_dummies(nuevo_estudiante)
+
+    nuevo_estudiante_encoded = nuevo_estudiante_encoded.reindex(
+        columns=COLUMNAS_MODELO,
+        fill_value=0
+    )
+
+    nuevo_estudiante_encoded = nuevo_estudiante_encoded.astype('float32')
+
+    if model_key == 'xgb':
+        if MAT_XGB_MODEL is None:
+            return insight(html.Span([
+                html.B('Modelo no disponible: '),
+                'No se pudo cargar modelo_final_icfes_xgboost.joblib.'
+            ]), kind='warn')
+
+        probabilidad = float(
+            MAT_XGB_MODEL.predict_proba(nuevo_estudiante_encoded)[:, 1][0]
+        )
+        threshold = MAT_XGB_THRESHOLD
+        model_label = 'Modelo XGBoost'
+
+    else:
+        if MAT_NN_MODEL is None:
+            return insight(html.Span([
+                html.B('Modelo no disponible: '),
+                'No se pudo cargar modelo_final_icfes.keras. Revise que TensorFlow esté instalado.'
+            ]), kind='warn')
+
+        probabilidad = float(
+            MAT_NN_MODEL.predict(nuevo_estudiante_encoded, verbose=0).ravel()[0]
+        )
+        threshold = MAT_NN_THRESHOLD
+        model_label = 'Modelo de Redes Neuronales'
+
+    prediccion = 1 if probabilidad >= threshold else 0
+
+    if prediccion == 1:
+        titulo = 'Predicción: Cumple el requisito'
+        mensaje = (
+            'El modelo estima que el estudiante tiene probabilidad suficiente de superar '
+            'el umbral de matemáticas (> 70).'
+        )
+        color = GRN
+        kind = 'success'
+    else:
+        titulo = 'Predicción: Requiere refuerzo'
+        mensaje = (
+            'El modelo estima que el estudiante no supera el umbral de matemáticas (> 70). '
+            'Se recomienda considerar refuerzo o precálculo.'
+        )
+        color = RED
+        kind = 'warn'
+
+    return html.Div([
+        html.Div(titulo, className='summary-card-main',
+                 style={'color': color, 'marginBottom': '8px'}),
+        html.Div([
+            html.Span(f'Modelo usado: {model_label}',
+                      className='summary-card-badge',
+                      style={'background': '#eff6ff', 'color': NAVY}),
+            html.Span(f'Probabilidad estimada: {probabilidad:.1%}',
+                      className='summary-card-badge',
+                      style={'background': '#f0fdf4', 'color': GRN,
+                             'marginLeft': '7px'}),
+            html.Span(f'Umbral: {threshold:.3f}',
+                      className='summary-card-badge',
+                      style={'background': '#fef3c7', 'color': AMB,
+                             'marginLeft': '7px'}),
+        ], style={'marginBottom': '10px'}),
+        insight(html.Span(mensaje), kind=kind)
+    ], className='summary-card', style={'borderColor': color})
 
 # ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
