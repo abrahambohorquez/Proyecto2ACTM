@@ -1,0 +1,243 @@
+{
+    "categorical_features": {
+        "cole_area_ubicacion": [
+            "RURAL",
+            "URBANO"
+        ],
+        "cole_bilingue": [
+            "N",
+            "S"
+        ],
+        "cole_calendario": [
+            "A",
+            "B"
+        ],
+        "cole_caracter": [
+            "ACADÉMICO",
+            "NO APLICA",
+            "TÉCNICO",
+            "TÉCNICO/ACADÉMICO"
+        ],
+        "cole_genero": [
+            "FEMENINO",
+            "MIXTO"
+        ],
+        "cole_jornada": [
+            "COMPLETA",
+            "MAÑANA",
+            "NOCHE",
+            "SABATINA",
+            "TARDE",
+            "UNICA"
+        ],
+        "cole_naturaleza": [
+            "NO OFICIAL",
+            "OFICIAL"
+        ],
+        "cole_sede_principal": [
+            "N",
+            "S"
+        ],
+        "cole_mcpio_ubicacion": [
+            "AYAPEL",
+            "BUENAVISTA",
+            "CANALETE",
+            "CERETÉ",
+            "CHIMÁ",
+            "CHINÚ",
+            "CIÉNAGA DE ORO",
+            "COTORRA",
+            "LA APARTADA",
+            "LA APARTADA (LA FRONTERA)",
+            "LORICA",
+            "LOS CÓRDOBAS",
+            "MOMIL",
+            "MONTELIBANO",
+            "MONTELÍBANO",
+            "MONTERÍA",
+            "MOÑITOS",
+            "PLANETA RICA",
+            "PUEBLO NUEVO",
+            "PUERTO ESCONDIDO",
+            "PUERTO LIBERTADOR",
+            "PURÍSIMA",
+            "PURÍSIMA DE LA CONCEPCIÓN",
+            "SAHAGÚN",
+            "SAN ANDRÉS DE SOTAVENTO",
+            "SAN ANTERO",
+            "SAN BERNARDO DEL VIENTO",
+            "SAN CARLOS",
+            "SAN JOSÉ DE URÉ",
+            "SAN PELAYO",
+            "TIERRALTA",
+            "TUCHÍN",
+            "VALENCIA"
+        ],
+        "estu_genero": [
+            "F",
+            "M"
+        ],
+        "estu_mcpio_reside": [
+            "ARBOLETES",
+            "AYAPEL",
+            "BARRANQUILLA",
+            "BOGOTÁ D.C.",
+            "BUENAVISTA",
+            "CALI",
+            "CAMPO DE LA CRUZ",
+            "CANALETE",
+            "CAUCASIA",
+            "CERETÉ",
+            "CHIGORODÓ",
+            "CHIMÁ",
+            "CHINÚ",
+            "CIÉNAGA DE ORO",
+            "COTORRA",
+            "COVEÑAS",
+            "FUNZA",
+            "GIRARDOTA",
+            "GUARANDA",
+            "LA APARTADA",
+            "LA JAGUA DEL PILAR",
+            "LA UNIÓN",
+            "LORICA",
+            "LOS CÓRDOBAS",
+            "LOS PALMITOS",
+            "MANIZALES",
+            "MANÍ",
+            "MEDELLÍN",
+            "MOCOA",
+            "MOMIL",
+            "MONTELÍBANO",
+            "MONTERÍA",
+            "MOÑITOS",
+            "PALMITO",
+            "PAZ DE ARIPORO",
+            "PLANETA RICA",
+            "PUEBLO NUEVO",
+            "PUERTO ESCONDIDO",
+            "PUERTO LIBERTADOR",
+            "PURÍSIMA DE LA CONCEPCIÓN",
+            "SAHAGÚN",
+            "SAN ANDRÉS DE SOTAVENTO",
+            "SAN ANTERO",
+            "SAN BERNARDO DEL VIENTO",
+            "SAN CARLOS",
+            "SAN JOSÉ DE URÉ",
+            "SAN MARCOS",
+            "SAN PEDRO DE URABÁ",
+            "SAN PELAYO",
+            "SANTA MARTA",
+            "SANTIAGO DE TOLÚ",
+            "SINCELEJO",
+            "TIERRALTA",
+            "TORO",
+            "TUCHÍN",
+            "VALENCIA",
+            "VALLEDUPAR",
+            "VILLAGARZÓN"
+        ],
+        "fami_cuartoshogar": [
+            "CINCO",
+            "CUATRO",
+            "DIEZ O MÁS",
+            "DOS",
+            "NUEVE",
+            "OCHO",
+            "SEIS",
+            "SEIS O MAS",
+            "SIETE",
+            "TRES",
+            "UNO"
+        ],
+        "fami_educacionmadre": [
+            "EDUCACIÓN PROFESIONAL COMPLETA",
+            "EDUCACIÓN PROFESIONAL INCOMPLETA",
+            "NINGUNO",
+            "NO APLICA",
+            "NO SABE",
+            "POSTGRADO",
+            "PRIMARIA COMPLETA",
+            "PRIMARIA INCOMPLETA",
+            "SECUNDARIA (BACHILLERATO) COMPLETA",
+            "SECUNDARIA (BACHILLERATO) INCOMPLETA",
+            "TÉCNICA O TECNOLÓGICA COMPLETA",
+            "TÉCNICA O TECNOLÓGICA INCOMPLETA"
+        ],
+        "fami_educacionpadre": [
+            "EDUCACIÓN PROFESIONAL COMPLETA",
+            "EDUCACIÓN PROFESIONAL INCOMPLETA",
+            "NINGUNO",
+            "NO APLICA",
+            "NO SABE",
+            "POSTGRADO",
+            "PRIMARIA COMPLETA",
+            "PRIMARIA INCOMPLETA",
+            "SECUNDARIA (BACHILLERATO) COMPLETA",
+            "SECUNDARIA (BACHILLERATO) INCOMPLETA",
+            "TÉCNICA O TECNOLÓGICA COMPLETA",
+            "TÉCNICA O TECNOLÓGICA INCOMPLETA"
+        ],
+        "fami_estratovivienda": [
+            "ESTRATO 1",
+            "ESTRATO 2",
+            "ESTRATO 3",
+            "ESTRATO 4",
+            "ESTRATO 5",
+            "ESTRATO 6",
+            "SIN ESTRATO"
+        ],
+        "fami_personashogar": [
+            "1 A 2",
+            "3 A 4",
+            "5 A 6",
+            "7 A 8",
+            "9 O MÁS",
+            "CINCO",
+            "CUATRO",
+            "DIEZ",
+            "DOCE O MÁS",
+            "DOS",
+            "NUEVE",
+            "OCHO",
+            "ONCE",
+            "SEIS",
+            "SIETE",
+            "TRES",
+            "UNA"
+        ],
+        "fami_tieneautomovil": [
+            "NO",
+            "SI"
+        ],
+        "fami_tienecomputador": [
+            "NO",
+            "SI"
+        ],
+        "fami_tieneinternet": [
+            "NO",
+            "SI"
+        ],
+        "fami_tienelavadora": [
+            "NO",
+            "SI"
+        ]
+    },
+    "numeric_features": {
+        "anio_periodo": {
+            "min": 2015.0,
+            "max": 2022.0,
+            "median": 2017.0
+        },
+        "periodo_aplicacion": {
+            "min": 1.0,
+            "max": 4.0,
+            "median": 2.0
+        },
+        "edad_aprox": {
+            "min": 13.0,
+            "max": 30.0,
+            "median": 17.0
+        }
+    }
+}
