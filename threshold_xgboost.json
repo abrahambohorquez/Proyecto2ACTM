@@ -1,0 +1,5 @@
+{
+    "optimized_threshold": 0.3102746307849884,
+    "target_recall": 0.8,
+    "selection_rule": "highest F1 among thresholds with recall >= target_recall"
+}
