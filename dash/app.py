@@ -72,6 +72,10 @@ _COLUMNAS_PATH = os.path.join(_ROOT, 'columnas_modelo.json')
 _CATEGORIAS_PATH = os.path.join(_ROOT, 'categorias_modelo.json')
 _THRESHOLD_XGB_PATH = os.path.join(_ROOT, 'threshold_xgboost.json')
 
+# v2 models (puntaje global + inglés A-)
+_DASH_DIR   = os.path.dirname(os.path.abspath(__file__))
+_MODELS_DIR = os.path.join(_DASH_DIR, '..', 'Tarea4_Modelos', 'modelos')
+
 
 def _safe_load_json(path, fallback):
     try:
@@ -117,9 +121,38 @@ try:
 except Exception as e:
     print(f'[!] No se pudo cargar el modelo de red neuronal — {e}')
 
+# ── v2 production models ──────────────────────────────────────────────
+ING_V2_MODEL = ING_V2_PREP = ING_V2_META = None
+REG_V2_MODEL = REG_V2_PREP = REG_V2_META = None
+
+try:
+    if joblib is not None and keras is not None:
+        ING_V2_MODEL = keras.models.load_model(
+            os.path.join(_MODELS_DIR, 'modelo_ingles_A-_v2.keras'))
+        ING_V2_PREP = joblib.load(
+            os.path.join(_MODELS_DIR, 'preprocessor_ingles_A-_v2.pkl'))
+        ING_V2_META = joblib.load(
+            os.path.join(_MODELS_DIR, 'metadata_ingles_A-_v2.pkl'))
+        print('[OK] Modelo inglés A- v2 cargado')
+except Exception as e:
+    print(f'[!] Modelo inglés v2 — {e}')
+
+try:
+    if joblib is not None and keras is not None:
+        REG_V2_MODEL = keras.models.load_model(
+            os.path.join(_MODELS_DIR, 'modelo_puntaje_global_v2.keras'))
+        REG_V2_PREP = joblib.load(
+            os.path.join(_MODELS_DIR, 'preprocessor_puntaje_global_v2.pkl'))
+        REG_V2_META = joblib.load(
+            os.path.join(_MODELS_DIR, 'metadata_puntaje_global_v2.pkl'))
+        print('[OK] Modelo puntaje global v2 cargado')
+except Exception as e:
+    print(f'[!] Modelo puntaje global v2 — {e}')
+
 df = None
 _hg = _hm = None  # histogram tuples
 agg_year = agg_area = agg_nat = agg_ingles = agg_mcpio = None
+school_by_mcpio = {}
 
 try:
     df = pd.read_csv(_CSV, low_memory=False)
@@ -151,9 +184,16 @@ try:
     _m  = df.dropna(subset=['punt_matematicas'])
     _hm = np.histogram(_m['punt_matematicas'].values, bins=50, range=(20, 100))
 
+    # school → municipality mapping for simulator
+    school_by_mcpio = {}
+    _sdf = df.dropna(subset=['cole_nombre_establecimiento', 'cole_mcpio_ubicacion'])
+    for _mc, _grp in _sdf.groupby('cole_mcpio_ubicacion'):
+        school_by_mcpio[_mc] = sorted(_grp['cole_nombre_establecimiento'].unique().tolist())
+
     print(f'[OK] CSV: {df.shape[0]:,} filas')
 except Exception as _e:
     print(f'[!]  CSV no disponible — {_e}')
+    school_by_mcpio = {}
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -348,6 +388,41 @@ MAT_FEATURE_GROUPS = [
         'fami_tienelavadora'
     ])
 ]
+
+# ── Simulator dropdown options (exact values seen by preprocessor) ─────
+SIM_OPTIONS = {
+    'cole_area_ubicacion':  ['RURAL', 'URBANO'],
+    'cole_naturaleza':      ['NO OFICIAL', 'OFICIAL'],
+    'cole_jornada':         ['COMPLETA', 'MAÑANA', 'NOCHE', 'SABATINA', 'TARDE', 'UNICA'],
+    'cole_calendario':      ['A', 'B'],
+    'cole_caracter':        ['ACADÉMICO', 'NO APLICA', 'TÉCNICO', 'TÉCNICO/ACADÉMICO'],
+    'cole_bilingue':        ['N', 'S'],
+    'cole_genero':          ['FEMENINO', 'MIXTO'],
+    'estu_genero':          ['F', 'M'],
+    'fami_tieneinternet':   ['NO', 'SI'],
+    'fami_tienecomputador': ['NO', 'SI'],
+    'fami_tieneautomovil':  ['NO', 'SI'],
+    'fami_tienelavadora':   ['NO', 'SI'],
+    'fami_estratovivienda': ['ESTRATO 1', 'ESTRATO 2', 'ESTRATO 3',
+                             'ESTRATO 4', 'ESTRATO 5', 'ESTRATO 6', 'SIN ESTRATO'],
+    'fami_educacionmadre':  [
+        'NINGUNO', 'PRIMARIA INCOMPLETA', 'PRIMARIA COMPLETA',
+        'SECUNDARIA (BACHILLERATO) INCOMPLETA', 'SECUNDARIA (BACHILLERATO) COMPLETA',
+        'TÉCNICA O TECNOLÓGICA INCOMPLETA', 'TÉCNICA O TECNOLÓGICA COMPLETA',
+        'EDUCACIÓN PROFESIONAL INCOMPLETA', 'EDUCACIÓN PROFESIONAL COMPLETA',
+        'POSTGRADO', 'NO APLICA', 'NO SABE',
+    ],
+    'fami_educacionpadre':  [
+        'NINGUNO', 'PRIMARIA INCOMPLETA', 'PRIMARIA COMPLETA',
+        'SECUNDARIA (BACHILLERATO) INCOMPLETA', 'SECUNDARIA (BACHILLERATO) COMPLETA',
+        'TÉCNICA O TECNOLÓGICA INCOMPLETA', 'TÉCNICA O TECNOLÓGICA COMPLETA',
+        'EDUCACIÓN PROFESIONAL INCOMPLETA', 'EDUCACIÓN PROFESIONAL COMPLETA',
+        'POSTGRADO', 'NO APLICA', 'NO SABE',
+    ],
+    'fami_cuartoshogar':    ['UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO',
+                             'SEIS', 'SIETE', 'OCHO', 'NUEVE', 'DIEZ O MÁS'],
+    'fami_personashogar':   ['1 A 2', '3 A 4', '5 A 6', '7 A 8', '9 O MÁS'],
+}
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -977,6 +1052,208 @@ def _mat_input_section(title, cols):
     })
 
 # ─────────────────────────────────────────────────────────────────────
+# 5b. SIMULATOR HELPERS
+# ─────────────────────────────────────────────────────────────────────
+
+def _predict_both(school_name, mcpio, area, naturaleza, jornada, calendario,
+                  bilingue, caracter, cole_genero, estu_genero, estrato,
+                  educ_madre, educ_padre, internet, computador, automovil,
+                  lavadora, cuartos, personas, edad):
+    base = {
+        'cole_area_ubicacion':  area,
+        'cole_naturaleza':      naturaleza,
+        'cole_jornada':         jornada,
+        'cole_calendario':      calendario,
+        'cole_caracter':        caracter,
+        'cole_bilingue':        bilingue,
+        'cole_genero':          cole_genero,
+        'estu_genero':          estu_genero,
+        'fami_tieneinternet':   internet,
+        'fami_tienecomputador': computador,
+        'fami_tieneautomovil':  automovil,
+        'fami_tienelavadora':   lavadora,
+        'cole_mcpio_ubicacion': mcpio,
+        'fami_estratovivienda': estrato,
+        'fami_educacionmadre':  educ_madre,
+        'fami_educacionpadre':  educ_padre,
+        'fami_cuartoshogar':    cuartos,
+        'fami_personashogar':   personas,
+        'edad': float(edad),
+    }
+
+    enc_ing = ING_V2_META['school_encoding'].get(
+        school_name, ING_V2_META['p_global'])
+    row_ing = {**base, 'colegio_enc': enc_ing}
+    X_ing   = ING_V2_PREP.transform(pd.DataFrame([row_ing]))
+    prob_ing = float(ING_V2_MODEL.predict(X_ing, verbose=0)[0][0])
+
+    enc_reg = REG_V2_META['school_encoding'].get(
+        school_name, REG_V2_META['p_global'])
+    row_reg = {**base, 'colegio_enc': enc_reg}
+    X_reg   = REG_V2_PREP.transform(pd.DataFrame([row_reg]))
+    pred_global = float(REG_V2_MODEL.predict(X_reg, verbose=0)[0][0])
+
+    return prob_ing, pred_global
+
+
+def _sim_dd(id_, opts, val):
+    return dcc.Dropdown(
+        id=id_,
+        options=[{'label': o, 'value': o} for o in opts],
+        value=val, clearable=False, style={'fontSize': '13px'})
+
+
+def _sim_field(label_, child):
+    return html.Div([
+        html.Div(label_, style={'fontSize': '12px', 'fontWeight': '600',
+                                'color': TEXT, 'marginBottom': '6px'}),
+        child,
+    ], style={'flex': '1 1 190px', 'minWidth': '190px'})
+
+
+def _tab_simulador():
+    if school_by_mcpio:
+        mcpio_list = sorted(school_by_mcpio.keys())
+    else:
+        mcpio_list = [
+            'AYAPEL', 'BUENAVISTA', 'CANALETE', 'CERETÉ', 'CHIMÁ', 'CHINÚ',
+            'CIÉNAGA DE ORO', 'COTORRA', 'LA APARTADA', 'LORICA', 'LOS CÓRDOBAS',
+            'MOMIL', 'MONTELÍBANO', 'MONTERÍA', 'MOÑITOS', 'PLANETA RICA',
+            'PUEBLO NUEVO', 'PUERTO ESCONDIDO', 'PUERTO LIBERTADOR', 'PURÍSIMA',
+            'SAHAGÚN', 'SAN ANDRÉS DE SOTAVENTO', 'SAN ANTERO',
+            'SAN BERNARDO DEL VIENTO', 'SAN CARLOS', 'SAN JOSÉ DE URÉ',
+            'SAN PELAYO', 'TIERRALTA', 'TUCHÍN', 'VALENCIA',
+        ]
+    mcpio_opts   = [{'label': m, 'value': m} for m in mcpio_list]
+    default_mcpio = mcpio_list[0]
+    first_schools = school_by_mcpio.get(default_mcpio, [])
+    school_opts   = [{'label': s, 'value': s} for s in first_schools]
+    default_school = first_schools[0] if first_schools else None
+
+    models_ok = ING_V2_MODEL is not None and REG_V2_MODEL is not None
+    status_col = GRN if models_ok else '#d97706'
+    status_lbl = 'Modelos cargados y listos' if models_ok else 'Modelos no disponibles'
+
+    return html.Div([
+        section(
+            'Simulador de Predicción Individual',
+            'Estime el puntaje global Saber 11 y la probabilidad de nivel A- en inglés '
+            'para cualquier perfil de estudiante del departamento de Córdoba. '
+            'Los modelos son redes neuronales entrenadas sobre 194.259 registros 2011–2022. '
+            'Los resultados son orientativos y deben interpretarse con el intervalo ±RMSE.',
+        ),
+
+        html.Div([
+            kpi('Modelo puntaje global', 'NN v2',
+                'R² = 0.378 · RMSE = 36.3 pts · encoding de colegio', BLUE),
+            kpi('Modelo inglés A-', 'NN v2',
+                'F1 = 0.794 · AUC = 0.740 · recall A- = 94.8%', GRN),
+            kpi('Media departamental', '241 pts',
+                'Referencia histórica del puntaje global', NAVY),
+            kpi('Umbral inglés A-', '0.33',
+                'Calibrado para maximizar F1 en validación', MID),
+            html.Div([
+                html.Div('Estado del simulador', className='metric-label'),
+                html.Div(
+                    html.Span(status_lbl, className='summary-card-badge',
+                              style={'background': '#f0fdf4' if models_ok else '#fef3c7',
+                                     'color': status_col}),
+                    style={'marginTop': '6px'}
+                ),
+            ], className='metric-card',
+               style={'borderTop': f'3px solid {status_col}'}),
+        ], className='metrics-row'),
+
+        html.Div([
+            html.Div('Perfil del estudiante', className='chart-title',
+                     style={'marginBottom': '18px'}),
+
+            html.Div([
+                _sim_field('Municipio del colegio',
+                           dcc.Dropdown(id='sim-mcpio', options=mcpio_opts,
+                                        value=default_mcpio, clearable=False,
+                                        style={'fontSize': '13px'})),
+                _sim_field('Colegio',
+                           dcc.Dropdown(id='sim-school', options=school_opts,
+                                        value=default_school, clearable=False,
+                                        placeholder='Seleccione municipio primero',
+                                        style={'fontSize': '13px'})),
+                _sim_field('Área', _sim_dd('sim-area',
+                           SIM_OPTIONS['cole_area_ubicacion'], 'URBANO')),
+                _sim_field('Naturaleza', _sim_dd('sim-naturaleza',
+                           SIM_OPTIONS['cole_naturaleza'], 'OFICIAL')),
+                _sim_field('Jornada', _sim_dd('sim-jornada',
+                           SIM_OPTIONS['cole_jornada'], 'MAÑANA')),
+            ], style={'display': 'flex', 'flexWrap': 'wrap', 'gap': '14px',
+                      'marginBottom': '16px'}),
+
+            html.Div([
+                _sim_field('Calendario', _sim_dd('sim-calendario',
+                           SIM_OPTIONS['cole_calendario'], 'A')),
+                _sim_field('Carácter', _sim_dd('sim-caracter',
+                           SIM_OPTIONS['cole_caracter'], 'ACADÉMICO')),
+                _sim_field('Bilingüe', _sim_dd('sim-bilingue',
+                           SIM_OPTIONS['cole_bilingue'], 'N')),
+                _sim_field('Género colegio', _sim_dd('sim-cole-genero',
+                           SIM_OPTIONS['cole_genero'], 'MIXTO')),
+                _sim_field('Género estudiante', _sim_dd('sim-estu-genero',
+                           SIM_OPTIONS['estu_genero'], 'F')),
+            ], style={'display': 'flex', 'flexWrap': 'wrap', 'gap': '14px',
+                      'marginBottom': '16px'}),
+
+            html.Div([
+                _sim_field('Estrato', _sim_dd('sim-estrato',
+                           SIM_OPTIONS['fami_estratovivienda'], 'ESTRATO 2')),
+                _sim_field('Internet en el hogar', _sim_dd('sim-internet',
+                           SIM_OPTIONS['fami_tieneinternet'], 'NO')),
+                _sim_field('Computador', _sim_dd('sim-computador',
+                           SIM_OPTIONS['fami_tienecomputador'], 'NO')),
+                _sim_field('Automóvil', _sim_dd('sim-automovil',
+                           SIM_OPTIONS['fami_tieneautomovil'], 'NO')),
+                _sim_field('Lavadora', _sim_dd('sim-lavadora',
+                           SIM_OPTIONS['fami_tienelavadora'], 'SI')),
+            ], style={'display': 'flex', 'flexWrap': 'wrap', 'gap': '14px',
+                      'marginBottom': '16px'}),
+
+            html.Div([
+                _sim_field('Educación de la madre',
+                           _sim_dd('sim-educ-madre', SIM_OPTIONS['fami_educacionmadre'],
+                                   'SECUNDARIA (BACHILLERATO) COMPLETA')),
+                _sim_field('Educación del padre',
+                           _sim_dd('sim-educ-padre', SIM_OPTIONS['fami_educacionpadre'],
+                                   'SECUNDARIA (BACHILLERATO) COMPLETA')),
+                _sim_field('Cuartos en el hogar',
+                           _sim_dd('sim-cuartos', SIM_OPTIONS['fami_cuartoshogar'], 'TRES')),
+                _sim_field('Personas en el hogar',
+                           _sim_dd('sim-personas', SIM_OPTIONS['fami_personashogar'], '3 A 4')),
+                _sim_field('Edad del estudiante',
+                           dcc.Input(id='sim-edad', type='number', value=17,
+                                     min=14, max=30, debounce=True,
+                                     style={'width': '100%', 'padding': '10px 12px',
+                                            'border': f'1px solid {BORD}',
+                                            'borderRadius': '8px', 'fontSize': '13px'})),
+            ], style={'display': 'flex', 'flexWrap': 'wrap', 'gap': '14px',
+                      'marginBottom': '22px'}),
+
+            html.Button(
+                'Calcular predicción',
+                id='sim-predict-btn', n_clicks=0,
+                style={
+                    'background': NAVY, 'color': 'white', 'border': 'none',
+                    'borderRadius': '10px', 'padding': '13px 32px',
+                    'fontWeight': '700', 'fontSize': '14px', 'cursor': 'pointer',
+                    'letterSpacing': '0.02em', 'boxShadow': '0 2px 6px rgba(30,58,95,0.25)',
+                }
+            ),
+
+        ], className='chart-card', style={'padding': '24px', 'marginBottom': '20px'}),
+
+        html.Div(id='sim-results'),
+
+    ], className='content-area')
+
+
+# ─────────────────────────────────────────────────────────────────────
 # 6. PRECOMPUTE STATIC CHARTS
 # ─────────────────────────────────────────────────────────────────────
 FIG_DIST   = _score_dist()
@@ -1445,6 +1722,7 @@ app.layout = html.Div([
                 dcc.Tab(label='Puntaje Global',      value='regresion'),
                 dcc.Tab(label='Nivel de Inglés A-',  value='ingles'),
                 dcc.Tab(label='Matemáticas',         value='matematicas'),
+                dcc.Tab(label='Simulador',           value='simulador'),
             ],
         ),
     ], className='tab-container'),
@@ -1465,6 +1743,7 @@ def render_tab(tab):
     if tab == 'regresion':   return _tab_regresion()
     if tab == 'ingles':      return _tab_ingles()
     if tab == 'matematicas': return _tab_matematicas()
+    if tab == 'simulador':   return _tab_simulador()
     return _tab_panorama()
 
 
@@ -1599,6 +1878,169 @@ def predict_math_score(n_clicks, model_key, *values):
         ], style={'marginBottom': '10px'}),
         insight(html.Span(mensaje), kind=kind)
     ], className='summary-card', style={'borderColor': color})
+
+# ── Simulator: update school options when municipality changes ────────
+@app.callback(
+    Output('sim-school', 'options'),
+    Output('sim-school', 'value'),
+    Input('sim-mcpio', 'value'),
+)
+def update_sim_schools(mcpio):
+    schools = school_by_mcpio.get(mcpio, []) if mcpio else []
+    opts    = [{'label': s, 'value': s} for s in schools]
+    val     = schools[0] if schools else None
+    return opts, val
+
+
+# ── Simulator: run both models on button click ────────────────────────
+@app.callback(
+    Output('sim-results', 'children'),
+    Input('sim-predict-btn', 'n_clicks'),
+    State('sim-school',      'value'),
+    State('sim-mcpio',       'value'),
+    State('sim-area',        'value'),
+    State('sim-naturaleza',  'value'),
+    State('sim-jornada',     'value'),
+    State('sim-calendario',  'value'),
+    State('sim-bilingue',    'value'),
+    State('sim-caracter',    'value'),
+    State('sim-cole-genero', 'value'),
+    State('sim-estu-genero', 'value'),
+    State('sim-estrato',     'value'),
+    State('sim-internet',    'value'),
+    State('sim-computador',  'value'),
+    State('sim-automovil',   'value'),
+    State('sim-lavadora',    'value'),
+    State('sim-educ-madre',  'value'),
+    State('sim-educ-padre',  'value'),
+    State('sim-cuartos',     'value'),
+    State('sim-personas',    'value'),
+    State('sim-edad',        'value'),
+    prevent_initial_call=True,
+)
+def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
+                      calendario, bilingue, caracter, cole_genero, estu_genero,
+                      estrato, internet, computador, automovil, lavadora,
+                      educ_madre, educ_padre, cuartos, personas, edad):
+    if not n_clicks:
+        raise PreventUpdate
+
+    if ING_V2_MODEL is None or REG_V2_MODEL is None:
+        return insight(html.Span([
+            html.B('Modelos no disponibles. '),
+            'Verifique que TensorFlow esté instalado y los archivos .keras estén en '
+            'Tarea4_Modelos/modelos/.',
+        ]), kind='warn')
+
+    try:
+        prob_ing, pred_global = _predict_both(
+            school or '', mcpio or '', area, naturaleza, jornada, calendario,
+            bilingue, caracter, cole_genero, estu_genero, estrato,
+            educ_madre, educ_padre, internet, computador, automovil,
+            lavadora, cuartos, personas, edad or 17,
+        )
+    except Exception as exc:
+        return insight(html.Span([html.B('Error de predicción: '), str(exc)]), kind='warn')
+
+    threshold_ing = float(ING_V2_META['threshold'])
+    is_riesgo     = prob_ing >= threshold_ing
+    dept_mean     = 241.0
+    dept_rmse     = 36.3
+
+    score_color = GRN if pred_global >= dept_mean else RED
+    ing_color   = RED if is_riesgo else GRN
+    ing_bg      = '#fef2f2' if is_riesgo else '#f0fdf4'
+    ing_label   = 'Alto riesgo de nivel A-' if is_riesgo else 'Bajo riesgo de nivel A-'
+    diff        = pred_global - dept_mean
+    diff_str    = f'+{diff:.0f}' if diff >= 0 else f'{diff:.0f}'
+
+    gauge_fig = go.Figure(go.Indicator(
+        mode='gauge+number',
+        value=round(prob_ing * 100, 1),
+        number={'suffix': '%', 'font': {'size': 28, 'color': ing_color}},
+        gauge=dict(
+            axis=dict(range=[0, 100], tickwidth=1, tickcolor='#ccc',
+                      tickfont=dict(size=10)),
+            bar=dict(color=ing_color, thickness=0.3),
+            bgcolor='white',
+            borderwidth=0,
+            threshold=dict(
+                line=dict(color=NAVY, width=3),
+                thickness=0.75,
+                value=round(threshold_ing * 100, 1),
+            ),
+            steps=[
+                {'range': [0, threshold_ing * 100], 'color': '#f0fdf4'},
+                {'range': [threshold_ing * 100, 100], 'color': '#fef2f2'},
+            ],
+        ),
+    ))
+    gauge_fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        font=_L['font'], margin=dict(l=20, r=20, t=20, b=20),
+        height=220,
+    )
+
+    return html.Div([
+        html.Div([
+            html.Div([
+                html.Div('Puntaje Global Estimado', className='metric-label'),
+                html.Div(f'{pred_global:.0f}',
+                         style={'fontSize': '3rem', 'fontWeight': '800',
+                                'color': score_color, 'lineHeight': '1',
+                                'letterSpacing': '-0.03em', 'marginBottom': '8px'}),
+                html.Div('puntos', style={'fontSize': '13px', 'color': SUB,
+                                         'marginTop': '-4px', 'marginBottom': '12px'}),
+                html.Div([
+                    html.Span('Media departamental: 241 pts',
+                              style={'fontSize': '12px', 'color': SUB}),
+                    html.Span(f' {diff_str} pts',
+                              style={'fontSize': '13px', 'fontWeight': '700',
+                                     'color': score_color, 'marginLeft': '8px'}),
+                ]),
+                html.Div(
+                    f'Intervalo estimado: [{pred_global - dept_rmse:.0f} – {pred_global + dept_rmse:.0f}] pts  (±1 RMSE)',
+                    style={'fontSize': '11px', 'color': LGRAY, 'marginTop': '8px'}
+                ),
+            ], className='metric-card',
+               style={'borderTop': f'3px solid {score_color}', 'flex': '1',
+                      'padding': '22px'}),
+
+            html.Div([
+                html.Div('Probabilidad de Nivel A- en Inglés', className='metric-label'),
+                dcc.Graph(figure=gauge_fig, config={'displayModeBar': False},
+                          style={'height': '200px', 'marginTop': '4px',
+                                 'marginBottom': '4px'}),
+                html.Div([
+                    html.Span(ing_label, className='summary-card-badge',
+                              style={'background': ing_bg, 'color': ing_color,
+                                     'fontSize': '12px', 'fontWeight': '700'}),
+                    html.Span(f'Umbral = {threshold_ing:.2f}',
+                              className='summary-card-badge',
+                              style={'background': '#f1f5f9', 'color': NAVY,
+                                     'marginLeft': '8px', 'fontSize': '11px'}),
+                ]),
+            ], className='metric-card',
+               style={'borderTop': f'3px solid {ing_color}', 'flex': '1',
+                      'padding': '22px', 'background': ing_bg}),
+
+        ], className='metrics-row'),
+
+        insight(html.Span([
+            html.B('Interpretación: '),
+            'El modelo de regresión estima un puntaje global de ',
+            html.B(f'{pred_global:.0f} pts'),
+            f' ({diff_str} pts respecto a la media departamental de 241). '
+            'El modelo de clasificación estima una probabilidad de ',
+            html.B(f'{prob_ing:.1%}'),
+            ' de que el estudiante quede en nivel A- en inglés — ',
+            html.B(ing_label.lower()),
+            f' (umbral de clasificación = {threshold_ing:.2f}). '
+            'Estos resultados reflejan patrones estadísticos históricos; '
+            'no determinan individualmente el resultado del estudiante.',
+        ])),
+    ])
+
 
 # ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
