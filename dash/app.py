@@ -74,7 +74,9 @@ _THRESHOLD_XGB_PATH = os.path.join(_ROOT, 'threshold_xgboost.json')
 
 # v2 models (puntaje global + inglés A-)
 _DASH_DIR   = os.path.dirname(os.path.abspath(__file__))
-_MODELS_DIR = os.path.join(_DASH_DIR, '..', 'Tarea4_Modelos', 'modelos')
+_MODELS_DIR = os.path.normpath(os.path.join(_DASH_DIR, '..', 'Tarea4_Modelos', 'modelos'))
+print(f'[INFO] Buscando modelos v2 en: {_MODELS_DIR}')
+print(f'[INFO] Carpeta existe: {os.path.isdir(_MODELS_DIR)}')
 
 
 def _safe_load_json(path, fallback):
@@ -126,26 +128,36 @@ ING_V2_MODEL = ING_V2_PREP = ING_V2_META = None
 REG_V2_MODEL = REG_V2_PREP = REG_V2_META = None
 
 try:
-    if joblib is not None and keras is not None:
-        ING_V2_MODEL = keras.models.load_model(
-            os.path.join(_MODELS_DIR, 'modelo_ingles_A-_v2.keras'))
-        ING_V2_PREP = joblib.load(
-            os.path.join(_MODELS_DIR, 'preprocessor_ingles_A-_v2.pkl'))
-        ING_V2_META = joblib.load(
-            os.path.join(_MODELS_DIR, 'metadata_ingles_A-_v2.pkl'))
-        print('[OK] Modelo inglés A- v2 cargado')
+    _ing_keras = os.path.join(_MODELS_DIR, 'modelo_ingles_A-_v2.keras')
+    _ing_prep  = os.path.join(_MODELS_DIR, 'preprocessor_ingles_A-_v2.pkl')
+    _ing_meta  = os.path.join(_MODELS_DIR, 'metadata_ingles_A-_v2.pkl')
+    if joblib is None:
+        raise RuntimeError('joblib no disponible')
+    if keras is None:
+        raise RuntimeError('tensorflow/keras no disponible')
+    if not os.path.exists(_ing_keras):
+        raise FileNotFoundError(f'No encontrado: {_ing_keras}')
+    ING_V2_MODEL = keras.models.load_model(_ing_keras)
+    ING_V2_PREP  = joblib.load(_ing_prep)
+    ING_V2_META  = joblib.load(_ing_meta)
+    print('[OK] Modelo inglés A- v2 cargado')
 except Exception as e:
     print(f'[!] Modelo inglés v2 — {e}')
 
 try:
-    if joblib is not None and keras is not None:
-        REG_V2_MODEL = keras.models.load_model(
-            os.path.join(_MODELS_DIR, 'modelo_puntaje_global_v2.keras'))
-        REG_V2_PREP = joblib.load(
-            os.path.join(_MODELS_DIR, 'preprocessor_puntaje_global_v2.pkl'))
-        REG_V2_META = joblib.load(
-            os.path.join(_MODELS_DIR, 'metadata_puntaje_global_v2.pkl'))
-        print('[OK] Modelo puntaje global v2 cargado')
+    _reg_keras = os.path.join(_MODELS_DIR, 'modelo_puntaje_global_v2.keras')
+    _reg_prep  = os.path.join(_MODELS_DIR, 'preprocessor_puntaje_global_v2.pkl')
+    _reg_meta  = os.path.join(_MODELS_DIR, 'metadata_puntaje_global_v2.pkl')
+    if joblib is None:
+        raise RuntimeError('joblib no disponible')
+    if keras is None:
+        raise RuntimeError('tensorflow/keras no disponible')
+    if not os.path.exists(_reg_keras):
+        raise FileNotFoundError(f'No encontrado: {_reg_keras}')
+    REG_V2_MODEL = keras.models.load_model(_reg_keras)
+    REG_V2_PREP  = joblib.load(_reg_prep)
+    REG_V2_META  = joblib.load(_reg_meta)
+    print('[OK] Modelo puntaje global v2 cargado')
 except Exception as e:
     print(f'[!] Modelo puntaje global v2 — {e}')
 
