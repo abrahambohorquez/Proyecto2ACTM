@@ -493,10 +493,13 @@ def _score_dist():
         marker_color=MID, marker_line_width=0,
         hovertemplate='Puntaje %{x:.0f}<br>%{y:,} estudiantes<extra></extra>',
     ))
-    for val, lbl, col in [(241, 'Media 241', RED), (235, 'Mediana 235', GRN)]:
+    for val, lbl, col, pos in [
+        (241, 'Media 241',   RED, 'top right'),
+        (235, 'Mediana 235', GRN, 'top left'),
+    ]:
         fig.add_vline(x=val, line_dash='dash', line_color=col, line_width=2,
                       annotation_text=lbl, annotation_font_size=11,
-                      annotation_font_color=col, annotation_position='top right')
+                      annotation_font_color=col, annotation_position=pos)
     fig.update_layout(**_L, showlegend=False, bargap=0.02)
     fig.update_xaxes(**_AX, title='Puntaje global')
     fig.update_yaxes(**_AX, title='Estudiantes')
@@ -1942,6 +1945,44 @@ def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
     except Exception as exc:
         return insight(html.Span([html.B('Error de predicción: '), str(exc)]), kind='warn')
 
+    # ── Math model (XGBoost) ──────────────────────────────────────────
+    math_prob = math_label = None
+    if MAT_XGB_MODEL is not None and COLUMNAS_MODELO:
+        try:
+            raw_math = {
+                'anio_periodo':       2022,
+                'periodo_aplicacion': 1,
+                'cole_area_ubicacion': area,
+                'cole_bilingue':      bilingue,
+                'cole_calendario':    calendario,
+                'cole_caracter':      caracter,
+                'cole_genero':        cole_genero,
+                'cole_jornada':       jornada,
+                'cole_naturaleza':    naturaleza,
+                'cole_sede_principal': 'S',
+                'cole_mcpio_ubicacion': mcpio,
+                'edad_aprox':         float(edad or 17),
+                'estu_genero':        estu_genero,
+                'estu_mcpio_reside':  mcpio,
+                'fami_cuartoshogar':  cuartos,
+                'fami_educacionmadre': educ_madre,
+                'fami_educacionpadre': educ_padre,
+                'fami_estratovivienda': estrato,
+                'fami_personashogar': personas,
+                'fami_tieneautomovil': automovil,
+                'fami_tienecomputador': computador,
+                'fami_tieneinternet': internet,
+                'fami_tienelavadora': lavadora,
+            }
+            _dfm = pd.get_dummies(pd.DataFrame([raw_math]))
+            _dfm = _dfm.reindex(columns=COLUMNAS_MODELO, fill_value=0).astype('float32')
+            math_prob  = float(MAT_XGB_MODEL.predict_proba(_dfm)[:, 1][0])
+            math_label = ('Cumple el umbral (> 70)'
+                          if math_prob >= MAT_XGB_THRESHOLD
+                          else 'No cumple el umbral (≤ 70)')
+        except Exception as _me:
+            print(f'[!] Math sim error: {_me}')
+
     threshold_ing = float(ING_V2_META['threshold'])
     is_riesgo     = prob_ing >= threshold_ing
     dept_mean     = 241.0
@@ -1954,7 +1995,7 @@ def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
     diff        = pred_global - dept_mean
     diff_str    = f'+{diff:.0f}' if diff >= 0 else f'{diff:.0f}'
 
-    gauge_fig = go.Figure(go.Indicator(
+    gauge_ing = go.Figure(go.Indicator(
         mode='gauge+number',
         value=round(prob_ing * 100, 1),
         number={'suffix': '%', 'font': {'size': 28, 'color': ing_color}},
@@ -1962,24 +2003,74 @@ def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
             axis=dict(range=[0, 100], tickwidth=1, tickcolor='#ccc',
                       tickfont=dict(size=10)),
             bar=dict(color=ing_color, thickness=0.3),
-            bgcolor='white',
-            borderwidth=0,
-            threshold=dict(
-                line=dict(color=NAVY, width=3),
-                thickness=0.75,
-                value=round(threshold_ing * 100, 1),
-            ),
+            bgcolor='white', borderwidth=0,
+            threshold=dict(line=dict(color=NAVY, width=3), thickness=0.75,
+                           value=round(threshold_ing * 100, 1)),
             steps=[
-                {'range': [0, threshold_ing * 100], 'color': '#f0fdf4'},
+                {'range': [0,  threshold_ing * 100], 'color': '#f0fdf4'},
                 {'range': [threshold_ing * 100, 100], 'color': '#fef2f2'},
             ],
         ),
     ))
-    gauge_fig.update_layout(
+    gauge_ing.update_layout(
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        font=_L['font'], margin=dict(l=20, r=20, t=20, b=20),
-        height=220,
+        font=_L['font'], margin=dict(l=20, r=20, t=20, b=20), height=200,
     )
+
+    math_card = html.Div([], style={'display': 'none'})
+    if math_prob is not None:
+        meets = math_prob >= MAT_XGB_THRESHOLD
+        mat_color = GRN if meets else RED
+        mat_bg    = '#f0fdf4' if meets else '#fef2f2'
+        gauge_mat = go.Figure(go.Indicator(
+            mode='gauge+number',
+            value=round(math_prob * 100, 1),
+            number={'suffix': '%', 'font': {'size': 28, 'color': mat_color}},
+            gauge=dict(
+                axis=dict(range=[0, 100], tickwidth=1, tickcolor='#ccc',
+                          tickfont=dict(size=10)),
+                bar=dict(color=mat_color, thickness=0.3),
+                bgcolor='white', borderwidth=0,
+                threshold=dict(line=dict(color=NAVY, width=3), thickness=0.75,
+                               value=round(MAT_XGB_THRESHOLD * 100, 1)),
+                steps=[
+                    {'range': [0,  MAT_XGB_THRESHOLD * 100], 'color': '#fef2f2'},
+                    {'range': [MAT_XGB_THRESHOLD * 100, 100], 'color': '#f0fdf4'},
+                ],
+            ),
+        ))
+        gauge_mat.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=_L['font'], margin=dict(l=20, r=20, t=20, b=20), height=200,
+        )
+        math_card = html.Div([
+            html.Div('Puntaje Matemáticas > 70', className='metric-label'),
+            dcc.Graph(figure=gauge_mat, config={'displayModeBar': False},
+                      style={'height': '190px', 'marginTop': '4px',
+                             'marginBottom': '4px'}),
+            html.Div([
+                html.Span(math_label, className='summary-card-badge',
+                          style={'background': mat_bg, 'color': mat_color,
+                                 'fontSize': '12px', 'fontWeight': '700'}),
+                html.Span(f'Umbral = {MAT_XGB_THRESHOLD:.2f}',
+                          className='summary-card-badge',
+                          style={'background': '#f1f5f9', 'color': NAVY,
+                                 'marginLeft': '8px', 'fontSize': '11px'}),
+            ]),
+        ], className='metric-card',
+           style={'borderTop': f'3px solid {mat_color}', 'flex': '1',
+                  'padding': '22px', 'background': mat_bg})
+
+    math_insight = []
+    if math_prob is not None:
+        meets = math_prob >= MAT_XGB_THRESHOLD
+        math_insight = [
+            ' El modelo XGBoost estima una probabilidad de ',
+            html.B(f'{math_prob:.1%}'),
+            ' de que el estudiante supere el umbral de 70 pts en matemáticas — ',
+            html.B('cumple el requisito' if meets else 'no cumple el requisito'),
+            f' (umbral = {MAT_XGB_THRESHOLD:.2f}).',
+        ]
 
     return html.Div([
         html.Div([
@@ -1999,7 +2090,7 @@ def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
                                      'color': score_color, 'marginLeft': '8px'}),
                 ]),
                 html.Div(
-                    f'Intervalo estimado: [{pred_global - dept_rmse:.0f} – {pred_global + dept_rmse:.0f}] pts  (±1 RMSE)',
+                    f'Intervalo: [{pred_global - dept_rmse:.0f} – {pred_global + dept_rmse:.0f}] pts  (±1 RMSE)',
                     style={'fontSize': '11px', 'color': LGRAY, 'marginTop': '8px'}
                 ),
             ], className='metric-card',
@@ -2008,8 +2099,8 @@ def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
 
             html.Div([
                 html.Div('Probabilidad de Nivel A- en Inglés', className='metric-label'),
-                dcc.Graph(figure=gauge_fig, config={'displayModeBar': False},
-                          style={'height': '200px', 'marginTop': '4px',
+                dcc.Graph(figure=gauge_ing, config={'displayModeBar': False},
+                          style={'height': '190px', 'marginTop': '4px',
                                  'marginBottom': '4px'}),
                 html.Div([
                     html.Span(ing_label, className='summary-card-badge',
@@ -2024,6 +2115,8 @@ def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
                style={'borderTop': f'3px solid {ing_color}', 'flex': '1',
                       'padding': '22px', 'background': ing_bg}),
 
+            math_card,
+
         ], className='metrics-row'),
 
         insight(html.Span([
@@ -2035,9 +2128,8 @@ def predict_simulador(n_clicks, school, mcpio, area, naturaleza, jornada,
             html.B(f'{prob_ing:.1%}'),
             ' de que el estudiante quede en nivel A- en inglés — ',
             html.B(ing_label.lower()),
-            f' (umbral de clasificación = {threshold_ing:.2f}). '
-            'Estos resultados reflejan patrones estadísticos históricos; '
-            'no determinan individualmente el resultado del estudiante.',
+            f' (umbral = {threshold_ing:.2f}).',
+            *math_insight,
         ])),
     ])
 
