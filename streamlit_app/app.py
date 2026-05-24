@@ -45,20 +45,20 @@ _MDIR = os.path.join(_DIR, 'modelos')
 
 @st.cache_resource(show_spinner='Cargando modelos de predicción…')
 def load_models():
-    from tensorflow import keras
-    ing_model = keras.models.load_model(os.path.join(_MDIR, 'modelo_ingles_A-_v2.keras'))
+    import onnxruntime as ort
+    ing_sess = ort.InferenceSession(os.path.join(_MDIR, 'modelo_ingles_A-_v2.onnx'))
     ing_prep  = joblib.load(os.path.join(_MDIR, 'preprocessor_ingles_A-_v2.pkl'))
     ing_meta  = joblib.load(os.path.join(_MDIR, 'metadata_ingles_A-_v2.pkl'))
-    reg_model = keras.models.load_model(os.path.join(_MDIR, 'modelo_puntaje_global_v2.keras'))
+    reg_sess = ort.InferenceSession(os.path.join(_MDIR, 'modelo_puntaje_global_v2.onnx'))
     reg_prep  = joblib.load(os.path.join(_MDIR, 'preprocessor_puntaje_global_v2.pkl'))
     reg_meta  = joblib.load(os.path.join(_MDIR, 'metadata_puntaje_global_v2.pkl'))
-    return ing_model, ing_prep, ing_meta, reg_model, reg_prep, reg_meta
+    return ing_sess, ing_prep, ing_meta, reg_sess, reg_prep, reg_meta
 
 try:
     ing_model, ing_prep, ing_meta, reg_model, reg_prep, reg_meta = load_models()
 except Exception as exc:
     st.error(f'No se pudieron cargar los modelos: {exc}')
-    st.info('Asegúrate de que la carpeta `modelos/` contiene los archivos .keras y .pkl.')
+    st.info('Asegúrate de que la carpeta `modelos/` contiene los archivos .onnx y .pkl.')
     st.stop()
 
 DEPT_MEAN  = 241.0
@@ -77,14 +77,19 @@ MCPIOS = sorted([
 
 
 # ── Función de predicción ──────────────────────────────────────────────────────
+def _onnx_run(session, X) -> float:
+    import numpy as np
+    inp = session.get_inputs()[0].name
+    return float(session.run(None, {inp: X.astype(np.float32)})[0][0][0])
+
 def _predict(profile: dict, school: str) -> tuple:
     enc_ing  = ing_meta['school_encoding'].get(school, ing_meta['p_global'])
     X_ing    = ing_prep.transform(pd.DataFrame([{**profile, 'colegio_enc': enc_ing}]))
-    prob_ing = float(ing_model.predict(X_ing, verbose=0)[0][0])
+    prob_ing = _onnx_run(ing_model, X_ing)
 
     enc_reg  = reg_meta['school_encoding'].get(school, reg_meta['p_global'])
     X_reg    = reg_prep.transform(pd.DataFrame([{**profile, 'colegio_enc': enc_reg}]))
-    score    = float(reg_model.predict(X_reg, verbose=0)[0][0])
+    score    = _onnx_run(reg_model, X_reg)
     return prob_ing, score
 
 
