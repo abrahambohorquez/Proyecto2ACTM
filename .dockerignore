@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Editor / IDE
+.vscode
+.devcontainer
+.idea
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+.pytest_cache
+.mypy_cache
+
+# Notebooks
+*.ipynb
+
+# MLflow tracking (no se necesita en runtime)
+mlruns
+mlartifacts
+mlflow.db
+
+# Carpetas de trabajo de otros compañeros (no son necesarias para correr el dashboard)
+streamlit_app
+Abraham_Pregunta
+
+# Tarea4_Modelos: solo necesitamos la carpeta modelos/, el resto pesa y no se usa
+Tarea4_Modelos/mlruns
+Tarea4_Modelos/*.png
+Tarea4_Modelos/*.docx
+Tarea4_Modelos/*.pptx
+Tarea4_Modelos/*.py
+
+# Lock files de Office
+~$*
+
+# Documentación
+*.md
+README.md
+LICENSE
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Docker
+despliegue/Dockerfile
+.dockerignore
